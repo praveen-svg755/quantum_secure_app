@@ -1,0 +1,29 @@
+   <!DOCTYPE html>
+   <html lang="en">
+   <head>
+       <meta charset="UTF-8">
+       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+       <title>Socket.IO Client</title>
+       <script src="/socket.io/socket.io.js"></script>
+       <script>
+           const socket = io('http://localhost:3001');
+
+           socket.on('keyUpdateClient', (key) => {
+               console.log('Received key from server:', key);
+           });
+
+           socket.on('receiveMsg', (msg) => {
+               console.log('Received message:', msg);
+           });
+
+           // Send a test message after connecting
+           socket.on('connect', () => {
+               socket.emit('sendMsg', { sender: 'Client', text: 'Hello, Server!' });
+           });
+       </script>
+   </head>
+   <body>
+       <h1>Socket.IO Client</h1>
+   </body>
+   </html>
+   

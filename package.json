@@ -1,0 +1,19 @@
+{
+  "name": "quantum-secure-communication",
+  "version": "1.0.0",
+  "description": "Quantum secure communication between Alice and Bob using BB84 protocol",
+  "main": "alice_server.js",
+  "scripts": {
+    "start:alice": "node alice_server.js",
+    "start:bob": "node bob_server.js",
+    "dev": "concurrently \"npm run start:alice\" \"npm run start:bob\""
+  },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

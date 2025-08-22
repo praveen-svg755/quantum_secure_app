@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bob - Quantum Secure Chat</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .bubble { word-break: break-all; padding: 10px 20px; margin-bottom: 10px; border-radius: 8px;}
+    .decrypted { background:#dcfce7; color:#166534;}
+    .encmsg { background:#f1f5f9; }
+    .system { color:#c026d3; font-size: 15px;}
+  </style>
+</head>
+<body class="bg-green-50 min-h-screen flex flex-col items-center p-10">
+  <div class="bg-white shadow-xl rounded-xl p-8 w-full max-w-lg">
+    <h1 class="text-2xl font-bold text-green-700 mb-5">Bob's Quantum Secure Chat Terminal</h1>
+    <label class="block font-semibold text-sm mb-1">Current Shared Key (BB84):</label>
+    <pre id="keyOutput" class="bg-slate-100 p-2 mb-2 rounded font-mono text-xs"></pre>
+    <div class="font-semibold mb-2 text-green-700">📨 Encrypted Message Received:</div>
+    <div id="encMsgBox" class="bubble encmsg mb-4 font-mono text-xs"></div>
+    <button id="decBtn" class="bg-green-700 text-white w-full py-2 rounded font-bold hover:bg-green-800 transition">🔓 Decrypt Message</button>
+    <div class="font-semibold mb-2 text-green-700">🔓 Decrypted Output:</div>
+    <div id="decOutput" class="bubble decrypted mb-2 font-mono"></div>
+    <div id="systemBox"></div>
+  </div>
+<script>
+  const socket = io('/bob');
+  let sharedKey = null;
+  let currentEncrypted = null;
+  function hexToBytes(hex) { return new Uint8Array(hex.match(/.{1,2}/g).map(b=>parseInt(b,16))); }
+
+  socket.on('bb84KeySync', keyHex=>{
+    sharedKey = keyHex;
+    document.getElementById('keyOutput').textContent = keyHex;
+  });
+  socket.on('receiveEncrypted', payload=>{
+    currentEncrypted = payload;
+    document.getElementById('encMsgBox').textContent = JSON.stringify(payload, null, 2);
+    document.getElementById('decOutput').textContent = '';
+  });
+
+  document.getElementById('decBtn').onclick = async ()=>{
+    if (!sharedKey || !currentEncrypted) return alert('Need key & message!');
+    try{
+      const keybuf = await crypto.subtle.importKey("raw", hexToBytes(sharedKey), "AES-CBC", false, ["decrypt"]);
+      const iv = hexToBytes(currentEncrypted.iv);
+      const encrypted = hexToBytes(currentEncrypted.encryptedData);
+      const ptbuf = await crypto.subtle.decrypt({name:"AES-CBC", iv}, keybuf, encrypted);
+      const msg = new TextDecoder().decode(ptbuf);
+      document.getElementById('decOutput').textContent = msg;
+      socket.emit('sendDecryptedToAlice', msg);
+    }catch(e){
+      document.getElementById('decOutput').textContent = '❌ Decryption failed or corrupted message!';
+      socket.emit('sendDecryptedToAlice', '[WARNING] Decryption failed!');
+    }
+  };
+
+  socket.on('system', msg=>{
+    document.getElementById('systemBox').innerHTML = `<div class="system">${msg}</div>`;
+  });
+</script>
+</body>
+</html>

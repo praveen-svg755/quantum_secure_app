@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Quantum Secure Chat - Alice & Bob</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .phone-frame {
+      max-width: 350px;
+      min-width: 320px;
+      background: linear-gradient(135deg, #f5f5fa 0%, #aafaf0 100%);
+      box-shadow: 0 8px 24px #0002;
+      border-radius: 38px;
+      border: 4px solid #f5f6fa;
+      margin: 0 18px;
+      padding: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 660px;
+      height: 80vh;
+    }
+    .notch {
+      width: 120px;
+      height: 22px;
+      background: #24243e;
+      margin: 14px auto 10px auto;
+      border-radius: 14px;
+    }
+    .ball {
+      width: 12px; height: 12px; border-radius:50%;
+      margin-inline: 2px; display:inline-block;
+    }
+    .bubble-me {
+      background: linear-gradient(120deg,#4f8fff,#65eadd 120%);
+      color: white; border-radius: 14px 14px 5px 14px; padding: 10px 17px; margin: 8px 0 8px auto; max-width: 64%;
+      word-break: break-word;
+    }
+    .bubble-other {
+      background: #fff9c4; border-radius: 14px 14px 14px 5px; color: #83560a; padding: 10px 17px; margin: 8px auto 8px 0; max-width: 64%;
+      word-break: break-word;
+    }
+    .system-msg {
+      text-align: center; font-style: italic; color: #8b5cf6; font-size:11px;
+      margin-bottom: 2px; margin-top: 0;
+    }
+    .encblock { font-size: 12px; background: #f1f5f9; border-radius: 7px; padding: 9px; }
+    .key-txt { font-weight:bold; color:#3182ce; font-size:10px; overflow:auto;}
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-200 via-violet-50 to-green-100 min-h-screen flex items-center justify-center">
+  <div class="flex gap-7 items-center w-full justify-center">
+
+    <!-- Alice's Phone -->
+    <div class="phone-frame p-0 flex-col" id="alicePhone">
+      <div class="notch"></div>
+      <h2 class="mb-1 text-xl font-extrabold text-blue-700 text-center">Alice</h2>
+      <div class="text-xs mb-2 text-center text-blue-500 font-semibold">Quantum Secure Chat</div>
+      <div class="mb-3 text-xs text-center">
+        <span id="aliceStatus" class="ball" style="background:#10b981;"></span>
+        BB84 Key: <span class="key-txt" id="aliceKey"></span>
+      </div>
+      <div class="flex-1 overflow-y-auto px-3 pb-2" id="aliceChat"></div>
+      <div class="p-4 pt-2">
+        <textarea id="aliceInput" rows="2" class="w-full rounded text-xs border p-2 mb-2" placeholder="Type a message..."></textarea>
+        <button id="aliceSend" class="w-full py-2 bg-blue-600 text-white font-semibold rounded-lg transition hover:bg-blue-700">🔒 Encrypt & Send</button>
+        <button id="aliceRegKey" class="w-full mt-1 py-1 bg-violet-200 text-xs text-violet-600 rounded-lg">🔁 Regenerate Key (BB84)</button>
+        <div class="mt-2 encblock" id="aliceEnc"></div>
+      </div>
+    </div>
+
+    <!-- Bob's Phone -->
+    <div class="phone-frame p-0 flex-col" id="bobPhone">
+      <div class="notch"></div>
+      <h2 class="mb-1 text-xl font-extrabold text-green-700 text-center">Bob</h2>
+      <div class="text-xs mb-2 text-center text-green-600 font-semibold">Quantum Secure Chat</div>
+      <div class="mb-3 text-xs text-center">
+        <span id="bobStatus" class="ball" style="background:#10b981;"></span>
+        BB84 Key: <span class="key-txt" id="bobKey"></span>
+      </div>
+      <div class="flex-1 overflow-y-auto px-3 pb-2" id="bobChat"></div>
+      <div class="p-4 pt-2">
+        <div class="encblock" id="bobEnc"></div>
+        <button id="bobDecrypt" class="w-full py-2 bg-green-700 text-white font-semibold rounded-lg mt-2 transition hover:bg-green-800">🔓 Decrypt Message</button>
+        <div class="mt-2 encblock" id="bobDec"></div>
+      </div>
+    </div>
+
+  </div>
+<script>
+  // --- Quantum Key Simulation ---
+  let bb84Key = randomKey();
+  document.getElementById('aliceKey').textContent = bb84Key;
+  document.getElementById('bobKey').textContent = bb84Key;
+
+  function randomKey(){
+    return Array.from(crypto.getRandomValues(new Uint8Array(32))).map(x=>x.toString(16).padStart(2,'0')).join('');
+  }
+
+  function appendMsg(target, txt, who="alice"){
+    const n = document.createElement('div');
+    n.className = (who==="alice") ? "bubble-me" : (who==="bob") ? "bubble-other" : "system-msg";
+    n.textContent = txt;
+    document.getElementById(target).appendChild(n);
+    let box = document.getElementById(target);
+    box.scrollTop = box.scrollHeight;
+  }
+  function appendSys(target, txt){
+    appendMsg(target,txt,"system");
+  }
+
+  // --- Crypto helpers ---
+  function hexToBytes(hex){ return new Uint8Array(hex.match(/.{1,2}/g).map(b=>parseInt(b,16))); }
+  function bytesToHex(arr){ return Array.from(arr).map(b=>b.toString(16).padStart(2,"0")).join(''); }
+
+  // --- Encrypt with key ---
+  async function encryptMSG(msg, keyHex){
+    const key = await crypto.subtle.importKey("raw", hexToBytes(keyHex), "AES-CBC", false, ["encrypt"]);
+    const iv = crypto.getRandomValues(new Uint8Array(16));
+    const ct = await crypto.subtle.encrypt({name:"AES-CBC", iv}, key, new TextEncoder().encode(msg));
+    return { iv: bytesToHex(iv), encryptedData: bytesToHex(new Uint8Array(ct)) };
+  }
+  // --- Decrypt with key ---
+  async function decryptMSG(enc, keyHex){
+    const key = await crypto.subtle.importKey("raw", hexToBytes(keyHex), "AES-CBC", false, ["decrypt"]);
+    const iv = hexToBytes(enc.iv);
+    const dt = hexToBytes(enc.encryptedData);
+    const buf = await crypto.subtle.decrypt({name:"AES-CBC", iv}, key, dt);
+    return new TextDecoder().decode(buf);
+  }
+
+  // --- Alice Section ---
+  let lastEncrypted = null;
+
+  document.getElementById('aliceSend').onclick = async function(){
+    const msg = document.getElementById('aliceInput').value.trim();
+    if(!msg) return;
+    const enc = await encryptMSG(msg, bb84Key);
+    lastEncrypted = enc;
+    document.getElementById('aliceEnc').textContent = JSON.stringify(enc, null, 2);
+    appendMsg("aliceChat", msg, "alice");
+    document.getElementById('aliceInput').value = "";
+
+    // Transfer encrypted "wirelessly" to Bob's screen
+    document.getElementById('bobEnc').textContent = JSON.stringify(enc, null, 2);
+    appendSys("bobChat", "🔒 Received encrypted message from Alice");
+    document.getElementById('bobDec').textContent = "";
+  };
+
+  document.getElementById('aliceRegKey').onclick = function(){
+    bb84Key = randomKey();
+    document.getElementById('aliceKey').textContent = bb84Key;
+    document.getElementById('bobKey').textContent = bb84Key;
+    appendSys("aliceChat", "🔑 BB84: New quantum key generated!");
+    appendSys("bobChat", "🔑 BB84: Alice sent new quantum key.");
+    document.getElementById('aliceEnc').textContent = "";
+    document.getElementById('bobEnc').textContent = "";
+    document.getElementById('bobDec').textContent = "";
+  };
+
+  // --- Bob Section ---
+  document.getElementById('bobDecrypt').onclick = async function(){
+    const encStr = document.getElementById('bobEnc').textContent;
+    if (!encStr.trim()) { appendSys("bobChat","No encrypted message to decrypt!"); return; }
+    try{
+      const enc = JSON.parse(encStr);
+      const plain = await decryptMSG(enc, bb84Key);
+      document.getElementById('bobDec').textContent = plain;
+      appendMsg("bobChat", plain, "bob");
+      appendSys("aliceChat", "📨 Bob decrypted your message: " + plain);
+    }catch(e){
+      document.getElementById('bobDec').textContent = "❌ Decryption failed!";
+      appendSys("bobChat","❌ Decryption failed!");
+      appendSys("aliceChat","⚠️ Bob could not decrypt (key changed?)");
+    }
+  };
+
+</script>
+</body>
+</html>
