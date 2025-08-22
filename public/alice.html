@@ -53,12 +53,12 @@
   <div class="flex gap-7 items-center w-full justify-center">
 
     <!-- Alice's Phone -->
-    <div class="phone-frame p-0 flex-col" id="alicePhone">
+    <div  class="phone-frame p-0 flex-col" id="alicePhone">
       <div class="notch"></div>
       <h2 class="mb-1 text-xl font-extrabold text-blue-700 text-center">Alice</h2>
       <div class="text-xs mb-2 text-center text-blue-500 font-semibold">Quantum Secure Chat</div>
       <div class="mb-3 text-xs text-center">
-        <span id="aliceStatus" class="ball" style="background:#10b981;"></span>
+        <span id= "aliceStatus" class= "ball" style= "background:#10b981;"></span>
         BB84 Key: <span class="key-txt" id="aliceKey"></span>
       </div>
       <div class="flex-1 overflow-y-auto px-3 pb-2" id="aliceChat"></div>
@@ -71,7 +71,7 @@
     </div>
 
     <!-- Bob's Phone -->
-    <div class="phone-frame p-0 flex-col" id="bobPhone">
+    <div class="phone-frame p-0 flex-col" id= "bobPhone">
       <div class="notch"></div>
       <h2 class="mb-1 text-xl font-extrabold text-green-700 text-center">Bob</h2>
       <div class="text-xs mb-2 text-center text-green-600 font-semibold">Quantum Secure Chat</div>
@@ -143,7 +143,7 @@
     document.getElementById('aliceInput').value = "";
 
     // Transfer encrypted "wirelessly" to Bob's screen
-    document.getElementById('bobEnc').textContent = JSON.stringify(enc, null, 2);
+       document.getElementById('bobEnc').textContent = JSON.stringify(enc, null, 2);
     appendSys("bobChat", "🔒 Received encrypted message from Alice");
     document.getElementById('bobDec').textContent = "";
   };
@@ -172,7 +172,7 @@
     }catch(e){
       document.getElementById('bobDec').textContent = "❌ Decryption failed!";
       appendSys("bobChat","❌ Decryption failed!");
-      appendSys("aliceChat","⚠️ Bob could not decrypt (key changed?)");
+      appendSys("aliceChat","⚠️ Bob could not decrypt  (key changed?)");
     }
   };
 

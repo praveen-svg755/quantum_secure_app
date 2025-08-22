@@ -2,8 +2,8 @@
 const crypto = require('crypto');
 
 const algorithm = 'aes-256-cbc';
-const key = crypto.randomBytes(32); // In a real app, this would be securely exchanged
-const iv = crypto.randomBytes(16);  // Initialization Vector
+const key = crypto.randomBytes(32); 
+const iv = crypto.randomBytes(16);  
 
 function encrypt(text) {
   const cipher = crypto.createCipheriv(algorithm, Buffer.from(key), iv);
